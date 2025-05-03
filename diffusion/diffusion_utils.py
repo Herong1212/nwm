@@ -61,7 +61,8 @@ def continuous_gaussian_log_likelihood(x, *, means, log_scales):
     centered_x = x - means
     inv_stdv = th.exp(-log_scales)
     normalized_x = centered_x * inv_stdv
-    log_probs = th.distributions.Normal(th.zeros_like(x), th.ones_like(x)).log_prob(normalized_x)
+    log_probs = th.distributions.Normal(th.zeros_like(
+        x), th.ones_like(x)).log_prob(normalized_x)
     return log_probs
 
 
@@ -88,7 +89,8 @@ def discretized_gaussian_log_likelihood(x, *, means, log_scales):
     log_probs = th.where(
         x < -0.999,
         log_cdf_plus,
-        th.where(x > 0.999, log_one_minus_cdf_min, th.log(cdf_delta.clamp(min=1e-12))),
+        th.where(x > 0.999, log_one_minus_cdf_min,
+                 th.log(cdf_delta.clamp(min=1e-12))),
     )
     assert log_probs.shape == x.shape
     return log_probs
