@@ -295,6 +295,28 @@ class FinalLayer(nn.Module):
 class CDiT(nn.Module):
     """
     Diffusion model with a Transformer backbone.
+    基于 Transformer 的扩散模型。
+
+    该类实现了一个基于 Transformer 的扩散模型，用于处理图像生成任务。它通过将输入图像分割成 patch，
+    并对这些 patch 进行嵌入编码，结合时间步、动作等条件信息，最终生成目标图像。
+
+    属性:
+    - context_size (int): 上下文的大小，表示模型在处理当前帧时，需要考虑的历史帧数，通常用于视频生成任务。
+    - learn_sigma (bool): 控制是否学习生成图像的噪声水平，如果为 True，则输出通道数为 in_channels * 2，分别表示均值和方差。
+    - in_channels (int): 输入图像的通道数。
+    - out_channels (int): 输出图像的通道数，如果 [learn_sigma](file:///root/private/WorldModel/nwm/models.py#L0-L0) 为 True，则输出通道数为 `in_channels * 2`。
+    - patch_size (int): 图像 patch 的大小，表示每个 patch 的宽度和高度。
+    - num_heads (int): Transformer 中多头注意力机制的头数。
+
+    - x_embedder (PatchEmbed): 将【输入图像】分割成 patch 并进行嵌入编码，以便后续的 Transformer 处理。
+    - t_embedder (TimestepEmbedder): 用于将【时间步】嵌入为向量表示的模块，作为条件信息输入模型。
+    - y_embedder (ActionEmbedder): 用于将【动作信息】嵌入为向量表示的模块，作为条件信息输入模型。
+
+    - pos_embed (nn.Parameter): 位置编码，用于为每个 patch 添加位置信息，帮助模型理解 patch 在图像中的位置。
+    - blocks (nn.ModuleList): 包含多个[CDiTBlock]的模块列表，每个 CDiTBlock 是一个 Transformer 层，用于处理嵌入后的 patch。
+    - final_layer (FinalLayer): 最后一层，用于将 Transformer 输出的高维特征映射回图像空间，生成最终的图像 patch。
+
+    - time_embedder (TimestepEmbedder): 用于将【相对时间】嵌入为向量表示的模块，作为条件信息输入模型。
     """
 
     def __init__(
@@ -309,6 +331,23 @@ class CDiT(nn.Module):
         mlp_ratio=4.0,
         learn_sigma=True,
     ):
+        """
+        初始化 CDiT 类。
+
+        参数:
+        - input_size (int): 输入图像的尺寸，默认为 32。
+        - context_size (int): 上下文的大小，默认为 2。
+        - patch_size (int): 图像 patch 的大小，默认为 2。
+        - in_channels (int): 输入图像的通道数，默认为 4。? 应该是 RGBA 吧！
+        - hidden_size (int): Transformer 的隐藏层维度，默认为 1152。
+        - depth (int): Transformer 的层数，默认为 28。
+        - num_heads (int): 多头注意力机制的头数，默认为 16。
+        - mlp_ratio (float): MLP 层的隐藏层维度与输入维度的比例，默认为 4.0。
+        - learn_sigma (bool): 是否学习 sigma，默认为 True。
+
+        返回:
+        None
+        """
         super().__init__()
         self.context_size = context_size
         self.learn_sigma = learn_sigma
@@ -320,8 +359,8 @@ class CDiT(nn.Module):
             input_size, patch_size, in_channels, hidden_size, bias=True)
         self.t_embedder = TimestepEmbedder(hidden_size)
         self.y_embedder = ActionEmbedder(hidden_size)
-        num_patches = self.x_embedder.num_patches
-        # for context and for predicted frame
+        num_patches = self.x_embedder.num_patches  # num_patches：表示图像被分割成多少个 patch。
+        # for context and for predicted frame --- 为上下文和预测帧生成位置编码
         self.pos_embed = nn.Parameter(torch.zeros(
             self.context_size + 1, num_patches, hidden_size), requires_grad=True)
         self.blocks = nn.ModuleList(
