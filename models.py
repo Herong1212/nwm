@@ -355,8 +355,11 @@ class CDiT(nn.Module):
         self.out_channels = in_channels * 2 if learn_sigma else in_channels
         self.patch_size = patch_size
         self.num_heads = num_heads
+
+        # ! 分割后的 patch 不能直接传入 Transformer，需要先通过 PatchEmbed 模块将每个 patch 转换为高维向量。
         self.x_embedder = PatchEmbed(
             input_size, patch_size, in_channels, hidden_size, bias=True)
+
         self.t_embedder = TimestepEmbedder(hidden_size)
         self.y_embedder = ActionEmbedder(hidden_size)
         num_patches = self.x_embedder.num_patches  # num_patches：表示图像被分割成多少个 patch。
