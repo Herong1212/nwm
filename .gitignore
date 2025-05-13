@@ -1,10 +1,9 @@
 __pycache__
+.ipynb_checkpoints
+.vscode
 results
 diffusion/__pycache__
 logs
-.vscode
-.ipynb_checkpoints
 models
-nwm/data
 data_splits/**/dataset*.pkl
 data
